@@ -14,7 +14,7 @@ public class Url {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String originalUrl;
     private String shortLink;
     private LocalDateTime createdAt;
