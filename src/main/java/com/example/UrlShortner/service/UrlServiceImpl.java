@@ -3,18 +3,16 @@ package com.example.UrlShortner.service;
 import com.example.UrlShortner.error.ExpiredUrl;
 import com.example.UrlShortner.error.InvalidUrl;
 import com.example.UrlShortner.error.UrlNotFound;
+import com.example.UrlShortner.model.CachedUrl;
 import com.example.UrlShortner.model.Url;
 import com.example.UrlShortner.model.UrlResponseDto;
 import com.example.UrlShortner.repository.UrlRepository;
 import com.example.UrlShortner.model.UrlDto;
 import com.google.common.hash.Hashing;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
@@ -23,6 +21,8 @@ public class UrlServiceImpl implements UrlService {
 
     @Autowired
     private UrlRepository urlRepository;
+    @Autowired
+    private CachedUrlLookupService cachedUrlLookupService;
 
     @Override
     public UrlResponseDto generateUrl(UrlDto urlDto) {
@@ -76,24 +76,30 @@ public class UrlServiceImpl implements UrlService {
     }
 
     @Override
-    public void deleteUrl(Url url) {
-        urlRepository.delete(url);
+    public void deleteUrl(String shortLink) {
+        urlRepository.deleteByShortLink(shortLink);
+        cachedUrlLookupService.evict(shortLink);
     }
 
     @Override
-    public String redirectUrl(String url) {
+    @Transactional(noRollbackFor = ExpiredUrl.class)
+    public String redirectUrl(String shortLink) {
 
-        if(url.isEmpty()) {
-            throw new InvalidUrl("Please enter a valid url!");
+        if (shortLink == null || shortLink.isBlank()) {
+            throw new InvalidUrl("Please enter a valid URL!");
         }
-        Url urlToRet = urlRepository.findByShortLink(url);
-        if(urlToRet == null) {
-            throw new UrlNotFound("Url Not Found!");
+
+        CachedUrl cachedUrl =
+                cachedUrlLookupService.findByShortLink(shortLink);
+
+        if (cachedUrl.expiresAt() != null &&
+                cachedUrl.expiresAt().isBefore(LocalDateTime.now())) {
+
+            deleteUrl(shortLink);
+
+            throw new ExpiredUrl("URL is expired!");
         }
-        if(urlToRet.getExpiresAt().isBefore(LocalDateTime.now())) {
-            deleteUrl(urlToRet);
-            throw new ExpiredUrl("Url is expired!");
-        }
-        return urlToRet.getOriginalUrl();
+
+        return cachedUrl.originalUrl();
     }
 }

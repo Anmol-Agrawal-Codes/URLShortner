@@ -1,5 +1,6 @@
 package com.example.UrlShortner.controller;
 
+import com.example.UrlShortner.config.CacheStatsLogger;
 import com.example.UrlShortner.model.UrlDto;
 import com.example.UrlShortner.model.UrlResponseDto;
 import com.example.UrlShortner.service.UrlService;
@@ -17,6 +18,9 @@ public class UrlController {
     @Autowired
     private UrlService urlService;
 
+    @Autowired
+    private CacheStatsLogger cacheStatsLogger;
+
     @PostMapping("/create")
     public UrlResponseDto createUrl(@RequestBody UrlDto urlDto) {
         return urlService.generateUrl(urlDto);
@@ -30,6 +34,8 @@ public class UrlController {
     @GetMapping("{shortLink}")
     public ResponseEntity<Object> redirectUrl(@PathVariable String shortLink) {
         String url = urlService.redirectUrl(shortLink);
+
+        cacheStatsLogger.printStats();
 
         return ResponseEntity.status(HttpStatus.FOUND) // 302 Redirect
                 .location(URI.create(url))
