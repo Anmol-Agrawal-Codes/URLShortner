@@ -23,7 +23,7 @@ public class CachedUrlLookupService {
         Url url = urlRepository.findByShortLink(shortLink);
 
         if (url == null) {
-            throw new UrlNotFound(shortLink);
+            throw new UrlNotFound("No short link was found for code '" + shortLink + "'.");
         }
 
         return new CachedUrl(

@@ -25,11 +25,6 @@
           <input id="theme-toggle" type="checkbox" role="switch" aria-label="Dark theme">
           <span class="theme-switch" aria-hidden="true"></span>
         </label>
-        <label class="connection-field" for="api-origin">
-          <span class="connection-dot" aria-hidden="true"></span>
-          <span>API</span>
-          <input id="api-origin" type="url" spellcheck="false" aria-label="Backend API origin">
-        </label>
       </div>
     </header>
 
@@ -43,8 +38,7 @@
           <form id="shorten-form" novalidate>
             <label class="field-label" for="original-url">Destination URL</label>
             <div class="url-input-wrap">
-              <span class="input-prefix" aria-hidden="true">https://</span>
-              <input id="original-url" name="originalUrl" type="url" placeholder="your-site.com/page" autocomplete="url" required>
+              <input id="original-url" name="originalUrl" type="text" inputmode="url" placeholder="your-site.com/page" autocomplete="url" required>
             </div>
 
             <div class="expiry-heading">

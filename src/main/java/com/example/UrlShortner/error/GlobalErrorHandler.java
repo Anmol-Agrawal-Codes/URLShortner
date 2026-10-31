@@ -3,11 +3,22 @@ package com.example.UrlShortner.error;
 import com.example.UrlShortner.model.UrlErrorResponseDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalErrorHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<UrlErrorResponseDto> handleRequestValidationException(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getDefaultMessage())
+                .findFirst()
+                .orElse("Request validation failed.");
+        UrlErrorResponseDto response = new UrlErrorResponseDto(HttpStatus.BAD_REQUEST.toString(), message);
+        return ResponseEntity.badRequest().body(response);
+    }
 
     @ExceptionHandler(UrlNotFound.class)
     public ResponseEntity<UrlErrorResponseDto> handleUrlNotFoundException(Exception e) {

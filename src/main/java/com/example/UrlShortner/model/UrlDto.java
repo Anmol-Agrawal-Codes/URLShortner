@@ -1,9 +1,9 @@
 package com.example.UrlShortner.model;
 
-import jakarta.persistence.Lob;
+import jakarta.validation.constraints.NotBlank;
 
 public record UrlDto(
-        @Lob String originalUrl,
+        @NotBlank(message = "Destination URL is required.") String originalUrl,
         String expiresAt
 ) {
 }

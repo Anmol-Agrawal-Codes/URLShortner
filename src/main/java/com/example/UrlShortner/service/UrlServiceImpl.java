@@ -13,11 +13,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class UrlServiceImpl implements UrlService {
+
+    private static final Pattern SCHEME_PREFIX = Pattern.compile("^([a-z][a-z0-9+.-]*):", Pattern.CASE_INSENSITIVE);
 
     @Autowired
     private UrlRepository urlRepository;
@@ -26,29 +33,72 @@ public class UrlServiceImpl implements UrlService {
 
     @Override
     public UrlResponseDto generateUrl(UrlDto urlDto) {
-        if (!urlDto.originalUrl().isEmpty()) {
-            String originalUrl = urlDto.originalUrl();
-            String encodedUrl = encodeUrl(originalUrl);
-            Url urlToPersist = new Url();
-            urlToPersist.setOriginalUrl(originalUrl);
-            urlToPersist.setShortLink(encodedUrl);
-            urlToPersist.setCreatedAt(LocalDateTime.now());
-            urlToPersist.setExpiresAt(getExpiresAt(urlDto.expiresAt(), urlToPersist.getCreatedAt()));
-            Url urlToRet = persistUrl(urlToPersist);
-
-            UrlResponseDto urlResponseDto = new UrlResponseDto(
-                    originalUrl, encodedUrl, urlToRet.getExpiresAt()
-            );
-            return urlResponseDto;
+        if (urlDto == null || urlDto.originalUrl() == null || urlDto.originalUrl().isBlank()) {
+            throw new InvalidUrl("Destination URL is required.");
         }
-        return null;
+
+        String originalUrl = normalizeOriginalUrl(urlDto.originalUrl());
+        validateOriginalUrl(originalUrl);
+
+        LocalDateTime createdAt = LocalDateTime.now();
+        String encodedUrl = encodeUrl(originalUrl);
+        Url urlToPersist = new Url();
+        urlToPersist.setOriginalUrl(originalUrl);
+        urlToPersist.setShortLink(encodedUrl);
+        urlToPersist.setCreatedAt(createdAt);
+        urlToPersist.setExpiresAt(getExpiresAt(urlDto.expiresAt(), createdAt));
+        Url urlToRet = persistUrl(urlToPersist);
+
+        return new UrlResponseDto(originalUrl, encodedUrl, urlToRet.getExpiresAt());
     }
 
     private LocalDateTime getExpiresAt(String expirationDate, LocalDateTime creationDate) {
-        if(expirationDate == null || expirationDate.isEmpty()) {
+        if (expirationDate == null || expirationDate.isBlank()) {
             return creationDate.plusMinutes(10);
         }
-        return LocalDateTime.parse(expirationDate);
+
+        LocalDateTime expiresAt;
+        try {
+            expiresAt = LocalDateTime.parse(expirationDate.trim());
+        } catch (DateTimeParseException exception) {
+            throw new InvalidUrl("Expiration must use the format yyyy-MM-dd'T'HH:mm:ss.");
+        }
+
+        if (!expiresAt.isAfter(creationDate)) {
+            throw new InvalidUrl("Expiration must be later than the current time.");
+        }
+        return expiresAt;
+    }
+
+    private void validateOriginalUrl(String originalUrl) {
+        try {
+            URI uri = new URI(originalUrl);
+            String scheme = uri.getScheme();
+            if (uri.getHost() == null || scheme == null ||
+                    (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
+                throw new InvalidUrl("Enter a valid destination URL beginning with http:// or https://.");
+            }
+        } catch (URISyntaxException exception) {
+            throw new InvalidUrl("Enter a valid destination URL beginning with http:// or https://.");
+        }
+    }
+
+    private String normalizeOriginalUrl(String originalUrl) {
+        String trimmedUrl = originalUrl.trim();
+        Matcher schemeMatcher = SCHEME_PREFIX.matcher(trimmedUrl);
+        if (schemeMatcher.find()) {
+            String scheme = schemeMatcher.group(1);
+            String remainder = trimmedUrl.substring(schemeMatcher.end());
+            boolean explicitWebUrl = (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))
+                    && remainder.startsWith("//");
+            boolean hostWithPort = remainder.matches("\\d+(?:[/?#].*)?");
+
+            if (!explicitWebUrl && !hostWithPort) {
+                throw new InvalidUrl("Enter a domain name or a URL beginning with http:// or https://.");
+            }
+        }
+
+        return trimmedUrl.matches("(?i)^https?://.*") ? trimmedUrl : "https://" + trimmedUrl;
     }
 
     private String encodeUrl(String url) {
@@ -86,7 +136,7 @@ public class UrlServiceImpl implements UrlService {
     public String redirectUrl(String shortLink) {
 
         if (shortLink == null || shortLink.isBlank()) {
-            throw new InvalidUrl("Please enter a valid URL!");
+            throw new InvalidUrl("Short link code is required.");
         }
 
         CachedUrl cachedUrl =
@@ -97,7 +147,7 @@ public class UrlServiceImpl implements UrlService {
 
             deleteUrl(shortLink);
 
-            throw new ExpiredUrl("URL is expired!");
+            throw new ExpiredUrl("This short link has expired.");
         }
 
         return cachedUrl.originalUrl();

@@ -4,6 +4,7 @@ import com.example.UrlShortner.config.CacheStatsLogger;
 import com.example.UrlShortner.model.UrlDto;
 import com.example.UrlShortner.model.UrlResponseDto;
 import com.example.UrlShortner.service.UrlService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +24,7 @@ public class UrlController {
     private CacheStatsLogger cacheStatsLogger;
 
     @PostMapping("/create")
-    public UrlResponseDto createUrl(@RequestBody UrlDto urlDto) {
+    public UrlResponseDto createUrl(@Valid @RequestBody UrlDto urlDto) {
         return urlService.generateUrl(urlDto);
     }
 

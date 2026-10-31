@@ -1,4 +1,3 @@
-const apiOriginInput = document.querySelector("#api-origin");
 const themeToggle = document.querySelector("#theme-toggle");
 const form = document.querySelector("#shorten-form");
 const originalUrlInput = document.querySelector("#original-url");
@@ -27,8 +26,7 @@ themeToggle.addEventListener("change", () => {
   localStorage.setItem("url-shortner-theme", themeToggle.checked ? "dark" : "light");
 });
 
-const configuredOrigin = window.URL_SHORTNER_CONFIG?.apiBaseUrl || window.location.origin;
-apiOriginInput.value = localStorage.getItem("url-shortner-api-origin") || configuredOrigin;
+const apiOrigin = new URL(window.URL_SHORTNER_CONFIG?.apiBaseUrl || window.location.origin).origin;
 
 const localDateTimeValue = (date) => {
   const offset = date.getTimezoneOffset() * 60000;
@@ -36,15 +34,6 @@ const localDateTimeValue = (date) => {
 };
 
 expiresAtInput.min = localDateTimeValue(new Date());
-
-function getApiOrigin() {
-  const value = apiOriginInput.value.trim();
-  const parsed = new URL(value);
-  if (!parsed.origin || !["http:", "https:"].includes(parsed.protocol)) {
-    throw new Error("Enter a valid HTTP or HTTPS API origin.");
-  }
-  return parsed.origin;
-}
 
 function showMessage(message, isError = false) {
   formMessage.textContent = message;
@@ -61,10 +50,35 @@ function formatExpiry(value) {
   }).format(date);
 }
 
+function normalizeDestinationUrl(value) {
+  const trimmedUrl = value.trim();
+  if (!trimmedUrl) throw new Error("Destination URL is required.");
+
+  const schemeMatch = trimmedUrl.match(/^([a-z][a-z\d+.-]*):/i);
+  if (schemeMatch) {
+    const scheme = schemeMatch[1].toLowerCase();
+    const remainder = trimmedUrl.slice(schemeMatch[0].length);
+    const explicitWebUrl = ["http", "https"].includes(scheme) && remainder.startsWith("//");
+    const hostWithPort = /^\d+(?:[/?#]|$)/.test(remainder);
+    if (!explicitWebUrl && !hostWithPort) {
+      throw new Error("Enter a domain name or a URL beginning with http:// or https://.");
+    }
+  }
+
+  const normalizedUrl = /^https?:\/\//i.test(trimmedUrl) ? trimmedUrl : `https://${trimmedUrl}`;
+  try {
+    const parsedUrl = new URL(normalizedUrl);
+    if (!parsedUrl.hostname) throw new Error();
+  } catch {
+    throw new Error("Enter a valid domain name or HTTP(S) URL.");
+  }
+  return normalizedUrl;
+}
+
 async function readError(response) {
   try {
     const body = await response.json();
-    return body.message || body.error || `Request failed (${response.status}).`;
+    return body.errorMsg || body.message || body.error || `Request failed (${response.status}).`;
   } catch {
     return `Request failed (${response.status}). Check the API connection and try again.`;
   }
@@ -74,8 +88,11 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
   showMessage("");
 
-  if (!originalUrlInput.validity.valid || !originalUrlInput.value.trim()) {
-    showMessage("Enter a complete destination URL, including its protocol.", true);
+  let destinationUrl;
+  try {
+    destinationUrl = normalizeDestinationUrl(originalUrlInput.value);
+  } catch (error) {
+    showMessage(error.message, true);
     originalUrlInput.focus();
     return;
   }
@@ -86,22 +103,13 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
-  let apiOrigin;
-  try {
-    apiOrigin = getApiOrigin();
-  } catch {
-    showMessage("Enter a valid backend API origin, such as http://localhost:8080.", true);
-    apiOriginInput.focus();
-    return;
-  }
-
   const submitButton = form.querySelector(".submit-button");
   submitButton.disabled = true;
   submitButton.querySelector("span").textContent = "Creating link...";
   resultState.textContent = "WORKING";
 
   const payload = {
-    originalUrl: originalUrlInput.value.trim(),
+    originalUrl: destinationUrl,
     expiresAt: expiresAtInput.value ? `${expiresAtInput.value}:00` : null
   };
 
@@ -126,7 +134,6 @@ form.addEventListener("submit", async (event) => {
     emptyResult.hidden = true;
     createdResult.hidden = false;
     resultState.textContent = "CREATED";
-    localStorage.setItem("url-shortner-api-origin", apiOrigin);
     showMessage("Your short link is ready.");
   } catch (error) {
     resultState.textContent = "ERROR";
@@ -147,11 +154,3 @@ copyButton.addEventListener("click", async () => {
   }
 });
 
-apiOriginInput.addEventListener("change", () => {
-  try {
-    apiOriginInput.value = getApiOrigin();
-    localStorage.setItem("url-shortner-api-origin", apiOriginInput.value);
-  } catch {
-    showMessage("Enter a valid backend API origin, such as http://localhost:8080.", true);
-  }
-});
