@@ -13,6 +13,7 @@ import java.net.URI;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = "${app.frontend-origin:http://localhost:5500}")
 public class UrlController {
 
     @Autowired

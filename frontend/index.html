@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f1e9">
+  <meta name="description" content="Create compact, expiring links with URL Shortner.">
+  <title>URL Shortner | Link desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="wordmark" href="./" aria-label="URL Shortner home">
+        <span class="brand-mark" aria-hidden="true">u/</span>
+        <span>url shortner</span>
+      </a>
+      <div class="topbar-actions">
+        <label class="theme-toggle" title="Dark theme">
+          <input id="theme-toggle" type="checkbox" role="switch" aria-label="Dark theme">
+          <span class="theme-switch" aria-hidden="true"></span>
+        </label>
+        <label class="connection-field" for="api-origin">
+          <span class="connection-dot" aria-hidden="true"></span>
+          <span>API</span>
+          <input id="api-origin" type="url" spellcheck="false" aria-label="Backend API origin">
+        </label>
+      </div>
+    </header>
+
+    <main>
+      <section class="workspace" aria-labelledby="page-title">
+        <div class="form-column">
+          <div class="section-kicker"><span>LINK DESK</span><span>01 / 01</span></div>
+          <h1 id="page-title">Make room<br>for what matters.</h1>
+          <p class="intro">Turn a long address into a link that gets straight to the point.</p>
+
+          <form id="shorten-form" novalidate>
+            <label class="field-label" for="original-url">Destination URL</label>
+            <div class="url-input-wrap">
+              <span class="input-prefix" aria-hidden="true">https://</span>
+              <input id="original-url" name="originalUrl" type="url" placeholder="your-site.com/page" autocomplete="url" required>
+            </div>
+
+            <div class="expiry-heading">
+              <label class="field-label" for="expires-at">Expiration</label>
+              <span class="field-note">Optional</span>
+            </div>
+            <input id="expires-at" name="expiresAt" type="datetime-local">
+            <p class="field-help">Leave blank to use the 10-minute default.</p>
+
+            <button class="submit-button" type="submit">
+              <span>Shorten URL</span>
+              <span class="button-arrow" aria-hidden="true">&#8599;</span>
+            </button>
+            <p id="form-message" class="form-message" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+
+        <aside class="result-column" aria-labelledby="result-heading">
+          <div class="result-topline">
+            <span id="result-heading" class="section-kicker">YOUR SHORT LINK</span>
+            <span id="result-state" class="result-state">READY</span>
+          </div>
+          <div id="empty-result" class="empty-result">
+            <div class="route-art" aria-hidden="true">
+              <span class="route-line"></span>
+              <span class="route-node route-node-start"></span>
+              <span class="route-node route-node-end"></span>
+              <span class="route-label route-label-start">LONG</span>
+              <span class="route-label route-label-end">SHORT</span>
+            </div>
+            <p>Your new link<br>will land here.</p>
+          </div>
+          <div id="created-result" class="created-result" hidden>
+            <p class="result-label">SHORT LINK</p>
+            <a id="short-link" class="short-link" target="_blank" rel="noopener noreferrer"></a>
+            <div class="result-actions">
+              <button id="copy-button" class="copy-button" type="button">Copy link</button>
+              <a id="open-button" class="open-button" target="_blank" rel="noopener noreferrer" aria-label="Open shortened link">Open &#8599;</a>
+            </div>
+            <div class="result-divider"></div>
+            <p class="result-label">DESTINATION</p>
+            <p id="destination-value" class="destination-value"></p>
+            <p class="result-label expiry-result-label">EXPIRES</p>
+            <p id="expiry-value" class="expiry-value"></p>
+          </div>
+          <div class="result-footer"><span>URL SHORTNER</span><span>API / V1</span></div>
+        </aside>
+      </section>
+
+      <footer class="page-footer">
+        <span>Short links, with an end date.</span>
+        <span>Built for the web</span>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>
